@@ -90,17 +90,13 @@ function init() {
 }
 
 // แตะหน้าจอเพื่อวางโมเดล
-window.addEventListener("click", (event) => {
+window.addEventListener("click", () => {
 
   if (!model) return;
 
   const clone = model.clone(true);
 
-  const x = (event.clientX / window.innerWidth) * 2 - 1;
-  const y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-  clone.position.set(x * 2, y * 2, -3);
-
+  clone.position.set(0, 0, -2); // วางตรงกลางจอ
   scene.add(clone);
 
 });
