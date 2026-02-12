@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pseudo WebAR</title>
+<title>Pseudo WebAR Auto</title>
+
 <style>
   body { margin:0; overflow:hidden; background:black; }
   video {
@@ -42,70 +43,76 @@ const video = document.getElementById("camera");
 
 // เปิดกล้องหลัง
 navigator.mediaDevices.getUserMedia({
-  video: { facingMode: { exact: "environment" } },
+  video: { facingMode: "environment" },
   audio: false
 }).then(stream => {
   video.srcObject = stream;
 }).catch(err => {
-  alert("เปิดกล้องไม่ได้");
+  alert("เปิดกล้องไม่ได้: " + err);
 });
 
-init();
-animate();
+// ----- INIT -----
+scene = new THREE.Scene();
 
-function init() {
+camera = new THREE.PerspectiveCamera(
+  70,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  100
+);
 
-  scene = new THREE.Scene();
+camera.position.set(0,0,0);
 
-  camera = new THREE.PerspectiveCamera(
-    70,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    100
-  );
+renderer = new THREE.WebGLRenderer({ alpha:true, antialias:true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-  camera.position.z = 3;
+// แสง
+const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+scene.add(light);
 
-  renderer = new THREE.WebGLRenderer({ alpha:true });
+// โหลด GLB
+const loader = new GLTFLoader();
+loader.load("model.glb", (gltf) => {
+
+  console.log("Model Loaded");
+
+  model = gltf.scene;
+
+  model.scale.set(2,2,2);      // ขยายขนาด
+  model.position.set(0,0,-3);  // วางหน้ากล้อง
+
+  scene.add(model);
+
+  // animation
+  mixer = new THREE.AnimationMixer(model);
+
+  if (gltf.animations.length > 0) {
+    const action = mixer.clipAction(gltf.animations[0]);
+    action.play();
+  }
+
+}, undefined, (error) => {
+  console.error("โหลด model ไม่ได้:", error);
+});
+
+// resize รองรับมือถือ
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
-
-  const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-  scene.add(light);
-
-  const loader = new GLTFLoader();
-  loader.load("model.glb", (gltf) => {
-
-    model = gltf.scene;
-    model.scale.set(0.5,0.5,0.5);
-
-    mixer = new THREE.AnimationMixer(model);
-
-    if (gltf.animations.length > 0) {
-      mixer.clipAction(gltf.animations[0]).play();
-    }
-
-  });
-
-}
-
-// แตะหน้าจอเพื่อวางโมเดล
-window.addEventListener("click", () => {
-
-  if (!model) return;
-
-  const clone = model.clone(true);
-
-  clone.position.set(0, 0, -2); // วางตรงกลางจอ
-  scene.add(clone);
-
 });
 
+// render loop
 function animate() {
   requestAnimationFrame(animate);
+
   if (mixer) mixer.update(0.016);
+
   renderer.render(scene, camera);
 }
+
+animate();
 
 </script>
 
